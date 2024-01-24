@@ -11,47 +11,41 @@ class HttpHelloView extends StatefulWidget {
 }
 
 class _HttpHelloViewState extends State<HttpHelloView> {
-  late bool isHaveData;
-  late String data;
+  late Future<http.Response> apiResponse;
 
   @override
   void initState() {
     super.initState();
-    isHaveData = false;
-    data = "";
+    apiResponse = getApiName();
   }
 
-  Future<void> getApiName() async {
-    var response = await http.get(Uri.parse(
+  Future<http.Response> getApiName() async {
+    return await http.get(Uri.parse(
         "https://hwasampleapi.firebaseio.com/api/books/0/author.json"));
-    var data = response.body;
-
-    data = jsonDecode(data);
-    setState(() {
-      isHaveData = !isHaveData;
-      this.data = data;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    var columnCenter = Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          isHaveData ? Text(data) : const CircularProgressIndicator(),
-          TextButton(
-            onPressed: () async {
-              const CircularProgressIndicator();
-              await getApiName();
-            },
-            child: const Text('Send Request'),
-          )
-        ],
-      ),
-    );
     return Scaffold(
-      body: columnCenter,
+      body: Center(
+        child: FutureBuilder(
+          future: apiResponse,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              if (snapshot.hasData) {
+                var responseData = jsonDecode(snapshot.data!.body);
+                return Text(responseData.toString());
+              } else {
+                return const Text("API'den veri alınamadı. Hata olabilir.");
+              }
+            } else if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else {
+              return const Text("API isteği sırasında bir hata oluştu.");
+            }
+          },
+        ),
+      ),
     );
   }
 }
